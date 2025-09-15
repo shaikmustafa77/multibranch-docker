@@ -7,23 +7,34 @@ pipeline {
                 sh 'docker build -t image3 .'
             }
         }
-        stage ("Tag") {
+
+        stage('Tag') {
             steps {
-                sh 'docker tag image3 shaikmustafa/paytm:movie'
+                // Use the branch name as the Docker tag
+                sh "docker tag image3 msvbhargav99/paytm:${env.BRANCH_NAME}"
             }
         }
-        stage ("Push") {
+
+        stage('Push') {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'dockerhub') {
-                        sh 'docker push shaikmustafa/paytm:movie'
+                        sh "docker push msvbhargav99/paytm:${env.BRANCH_NAME}"
                     }
                 }
             }
         }
-        stage ("Deploy") {
+
+        stage('Deploy') {
             steps {
-                sh 'docker run -itd --name movie-app -p 3333:80 shaikmustafa/paytm:movie'
+                // 1) Remove any existing container named 'movie-app'
+                // 2) Start a fresh one, using the branch name as image tag
+                sh '''
+                    if docker ps -a --format '{{.Names}}' | grep -q '^movie-app$'; then
+                      docker rm -f movie-app
+                    fi
+                '''
+                sh "docker run -d --name movie-app -p 3333:80 msvbhargav99/paytm:${env.BRANCH_NAME}"
             }
         }
     }
